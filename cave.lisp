@@ -1,8 +1,6 @@
 ;;; To Do List:
-;;;   Repeats room images!
-;;;   Don't allow to leave via forest until you defeat the dragon
-;;;   Reduce weapon upon use
-;;;   Prevent loops or make sure the exit is on the starting loop
+;;;
+;;;   Make sure that every room is reachable from the start
 
 ;; (load "cave.lisp")
 (declaim (optimize (debug 3)))
@@ -44,15 +42,15 @@
 			      as kill from 1 by 1
 			      until (< (length (room-doors to-room)) 4)
 			      finally (return to-room)))
-	       (free-from-door (loop for symbol in *door-symbols*
+	       (free-from-symbol (loop for symbol in *door-symbols*
 				     until (null (find symbol (room-doors from-room) :key #'door-symbol))
 				     finally (return symbol)))
-	       (free-to-door (loop for symbol in *door-symbols*
+	       (free-to-symbol (loop for symbol in *door-symbols*
 				   until (null (find symbol (room-doors to-room) :key #'door-symbol))
 				   finally (return symbol))))
-	  (push (make-door :symbol free-from-door :room to-room :image (free-room-door-image from-room))
+	  (push (make-door :symbol free-from-symbol :room to-room :image (free-room-door-image from-room))
 		(room-doors from-room))
-	  (push (make-door :symbol free-to-door :room from-room :image (free-room-door-image from-room)) 
+	  (push (make-door :symbol free-to-symbol :room from-room :image (free-room-door-image to-room)) 
 		(room-doors to-room))
 	  ))
   ;; Assign a weapon and a mob to each room (Except the starting room has no mob)
@@ -104,7 +102,7 @@
 	 ;; If the player is dead...
 	 (when (<= (player-health *player*) 0)
 	   (return :lose))
-	 ;; If the mob a dead collect the weapon...
+	 ;; If the mob a dead collect the weapon and the mob's initial strength
 	 (setf mob (room-mob room))
 	 (when (and mob (<= (getf mob :hp) 0))
 	   (format t "You killed the ~a!" (getf mob :name))
@@ -163,7 +161,7 @@
 			  as image = (door-image door) 
 			  when (char-equal (aref action 0) (aref image 0))
 			  do (return door)))
-	 ;; Move, and incr. my health
+	 ;; Move, and incf my health
 	 (if door
 	     (progn (setf room (door-room door))
 		    (incf (player-health *player*)))
@@ -183,19 +181,23 @@
 	 (return t))
    (push w (player-inventory *player*))))
 
-(DEFUN wield-weapon (weapon mob)
+(defun wield-weapon (weapon mob)
   (if (null weapon)
       (format t "You aren't holding a weapon!")
     (progn
-      ;; Regardless of hit, subtract 1 from weapon power
-      (decf (getf weapon :power))
       (format t (getf weapon :attack-phrase) (getf mob :name))
       (format t "~%")
       (if (zerop (random 2))
 	  (progn
 	    (format t "Hit!~%")
-	    (decf (getf mob :hp) (getf weapon :power)))
-	(format t "Miss!")))))
+	    (decf (getf mob :hp) (getf weapon :power))
+	    )
+	(format t "Miss!"))
+      ;; Regardless of hit, subtract 1 from weapon power (bottom out at 0)
+      (decf (getf weapon :power))
+      (if (< (getf weapon :power) 0)
+	  (setf (getf weapon :power) 0))
+      )))
 
 (defun show-cave ()
   (loop for room in *cave*
