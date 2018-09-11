@@ -1,11 +1,12 @@
 ;;; To Do List:
-;;;   Can be closed loops
+;;;   Repeats room images!
 ;;;   Don't allow to leave via forest until you defeat the dragon
+;;;   Reduce weapon upon use
+;;;   Prevent loops or make sure the exit is on the starting loop
 
 ;; (load "cave.lisp")
 (declaim (optimize (debug 3)))
 (setq *print-circle* t)
-
 
 (defvar *player* nil)
 (defstruct player health inventory)
@@ -143,6 +144,21 @@
 	 (when (string-equal "?" action)
 	   (format t *help-string*)
 	   (go top))
+	 ;; ! moves you straight to the dragon room for testing or if you get bored
+	 (when (char-equal #\! (aref action 0))
+	     (format t "Hold on tight, teleporting to the dragon room!!!")
+	     (loop for new-room in *cave*
+		   as mob-name = (getf (room-mob new-room) :name)
+		   when (and mob-name (string-equal "Dragon" mob-name))
+		   do (setf room new-room))
+	     (go top))
+	 ;; Don't allow the player to run out the exit from the dragon room,
+	 ;; unless the dragon is dead
+	 (when (and (string-equal "Dragon" (getf mob :name))
+		  (char-equal #\f (aref action 0)))
+	     (format t "You can't exit until you have defeated the dragon! (Try something else!)")
+	     (go top))
+	 ;; Exit thru a door
 	 (setf door (loop for door in doors
 			  as image = (door-image door) 
 			  when (char-equal (aref action 0) (aref image 0))
@@ -169,8 +185,10 @@
 
 (DEFUN wield-weapon (weapon mob)
   (if (null weapon)
-      (format t "You don't have weapon!")
+      (format t "You aren't holding a weapon!")
     (progn
+      ;; Regardless of hit, subtract 1 from weapon power
+      (decf (getf weapon :power))
       (format t (getf weapon :attack-phrase) (getf mob :name))
       (format t "~%")
       (if (zerop (random 2))
