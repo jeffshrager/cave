@@ -17,7 +17,7 @@
 
 (defparameter *door-symbols* '(:a :b :c :d))
 
-(defstruct room name doors mob weapon)
+(defstruct room name doors mob weapon power)
 
 (defvar *cave* "This is setup by init-cave.")
 
@@ -34,7 +34,16 @@
   ;; First we make the rooms, then the doors.
   (loop for n below n-rooms
 	do (push (make-room :name (format nil "Room-~a" n)) *cave*))
-  ;; Put in at least one door in each room.
+  ;; Start by putting in a door to the next room. This avoids having a disconnected cave
+  (loop for from-room in *cave*
+	as to-room in (cdr *cave*)
+	do
+	(push (make-door :symbol :a :room to-room :image (free-room-door-image from-room))
+		(room-doors from-room))
+	(push (make-door :symbol :a :room from-room :image (free-room-door-image to-room)) 
+	      (room-doors to-room))
+	)
+  ;; Now at least one more door in each room.
   (loop for from-room in *cave*
 	when (< (length (room-doors from-room)) 4)
 	do 
@@ -62,6 +71,8 @@
 	(setf (room-weapon room) weapon)
 	(setf (getf mob :hp) (+ (car hp) (random (cdr hp))))
 	(setf (room-mob room) mob)
+	;; Store the mob's initial hp to add this to the player if the mob is killed
+	(setf (room-power room) (getf mob :power))
 	)
   ;; Add the exit in a random room, and assign the dragon to defend it
   (let ((exit-room (nth (1+ (random (1- (length *cave*)))) *cave*))) ;; Make sure it's not the start room!
@@ -105,18 +116,21 @@
 	 ;; If the mob a dead collect the weapon and the mob's initial strength
 	 (setf mob (room-mob room))
 	 (when (and mob (<= (getf mob :hp) 0))
-	   (format t "You killed the ~a!" (getf mob :name))
+	   (format t "********* You killed the ~a, " (getf mob :name))
 	   (let ((weapon (room-weapon room)))
-	     (format t "You collected the ~a!" (getf weapon :name))
+	     (format t "collected the ~a, and gained ~a hp! *********~%" (getf weapon :name)
+		     (room-power room))
 	     (add-inventory-weapon weapon) ;; makes a new one or increments the power of any you have
 	     (setf (room-weapon room) nil)
+	     (incf (player-health *player*) (room-power room))
 	     (setf (room-mob room) nil)
-	     (setf mob nil)))
+	     (setf mob nil)
+	     ))
 	 ;; Describe the room and roll...
 	 (setf doors (room-doors room))
 	 (describe-room room)
 	 ;; Mob (if any) attack?
-	 (when (and mob (zerop (random 2)))
+	 (when (and mob (zerop (random 3)))
 	   (format t "The ~a attacks you!" (getf mob :name))
 	   (decf (player-health *player*) (getf mob :power))
 	   (if (<= (player-health *player*)) (go top)))
@@ -191,6 +205,7 @@
 	  (progn
 	    (format t "Hit!~%")
 	    (decf (getf mob :hp) (getf weapon :power))
+	    (decf (getf mob :power)) ;; Also take 1 from the mob's power
 	    )
 	(format t "Miss!"))
       ;; Regardless of hit, subtract 1 from weapon power (bottom out at 0)

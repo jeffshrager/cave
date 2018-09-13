@@ -23,26 +23,26 @@
 	 :type :weapon
 	 :name "knife"
 	 :attack-phrase "You attempt to knife the ~a!"
-	 :power 1
+	 :power 4
 	 ) 
 	(
 	 :type :weapon
 	 :name "sword"
 	 :attack-phrase "You swing your sword at the ~a!"
-	 :power 3
+	 :power 12
 	 ) 
 
 	(
 	 :type :weapon
 	 :name "bow"
 	 :attack-phrase "You fire an arrow at the ~a!"
-	 :power 2
+	 :power 8
 	 ) 
 	(
 	 :type :weapon
 	 :name "grenade launcher"
 	 :attack-phrase "You launch a grenade at the ~a!"
-	 :power 5
+	 :power 16
 	 ) 
 	))
 
