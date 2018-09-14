@@ -131,10 +131,10 @@
 	 (describe-room room)
 	 ;; Mob (if any) attack?
 	 (when (and mob (zerop (random 3)))
-	   (format t "The ~a attacks you!" (getf mob :name))
+	   (format t "~%~%********** The ~a attacks you **********~%~%" (getf mob :name))
 	   (decf (player-health *player*) (getf mob :power))
 	   (if (<= (player-health *player*)) (go top)))
-	 (format t "You have health ~a!" (player-health *player*))
+	 (format t "~%You have health: ~a~%" (player-health *player*))
 	 ;; Person action...
 	 (setf action (read-line))
 	 (when (zerop (length action))
@@ -151,7 +151,7 @@
 					   when (char-equal wchar ichar)
 					   do (return weapon))))
 			     mob)
-	     (format t "There's nothing here to attack!~%"))
+	     (format t "There's nothing here to attack.~%"))
 	   (go top))
 	 (when (string-equal "?" action)
 	   (format t *help-string*)
@@ -159,6 +159,7 @@
 	 ;; ! moves you straight to the dragon room for testing or if you get bored
 	 (when (char-equal #\! (aref action 0))
 	     (format t "Hold on tight, teleporting to the dragon room!!!")
+	     (loop for i below 10 do (format t ".") (sleep 1))
 	     (loop for new-room in *cave*
 		   as mob-name = (getf (room-mob new-room) :name)
 		   when (and mob-name (string-equal "Dragon" mob-name))
@@ -203,11 +204,11 @@
       (format t "~%")
       (if (zerop (random 2))
 	  (progn
-	    (format t "Hit!~%")
+	    (format t "!!!!!!!!! Hit !!!!!!!!! ~%")
 	    (decf (getf mob :hp) (getf weapon :power))
 	    (decf (getf mob :power)) ;; Also take 1 from the mob's power
 	    )
-	(format t "Miss!"))
+	(format t "..... Miss ....."))
       ;; Regardless of hit, subtract 1 from weapon power (bottom out at 0)
       (decf (getf weapon :power))
       (if (< (getf weapon :power) 0)
@@ -219,18 +220,19 @@
 	do (describe-room room)))
 
 (defun describe-room (room)
-  (format t "~%You are in room ~a, with health ~a.~%" (room-name room) (player-health *player*))
+  (format t "~%~%You are in room ~a. You have health ~a.~%~%" (room-name room) (player-health *player*))
   (loop for door in (room-doors room)
-	do (format t "There is a door with a picture of a ~a.~%" (door-image door)))
-  (when (room-weapon room) (format t "There is a ~a laying here.~%" (getf (room-weapon room) :name)))
-  (when (room-mob room) (format t "Watch out! There is a ~a here with hp ~a.~%" 
+	do (format t "There is a door with a picture of a [ ~a ].~%" (door-image door)))
+  (when (room-weapon room) (format t "~%There is a ~a laying here.~%" (getf (room-weapon room) :name)))
+  (when (room-mob room) (format t "~%~%!!!!! Watch out! There is a ~a here with ~a hp and ~a hit power !!!!!~%~%" 
 				(getf (room-mob room) :name)
 				(getf (room-mob room) :hp)
+				(getf (room-mob room) :power)
 				))
   (loop for weapon in (player-inventory *player*)
-	do (format t "You are holding a ~a with power ~a.~%" 
+	do (format t "--- You are holding a ~a with power ~a~%" 
 		   (getf weapon :name) 
 		   (getf weapon :power)))
-  (format t "================================~%What do you want to do? (Type ? for help.) ")
+  (format t "================================~%What do you want to do? (Type ? for help.)")
   )
 
